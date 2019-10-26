@@ -57,7 +57,7 @@ public class ViewPagerDrag extends ViewGroup {
 
     public static final String TAG = "ViewPagerDrag";
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     private static final boolean USE_CACHE = false;
 
@@ -84,7 +84,7 @@ public class ViewPagerDrag extends ViewGroup {
         int position;
         boolean scrolling;
         float widthFactor;
-        float offset;
+        float offset = 0.1f;
     }
 
     private static final Comparator<ItemInfo> COMPARATOR = new Comparator<ItemInfo>() {
@@ -627,8 +627,20 @@ public class ViewPagerDrag extends ViewGroup {
         int destX = 0;
         if (curInfo != null) {
             final int width = getClientWidth();
-            destX = (int) (width * Math.max(mFirstOffset,
-                    Math.min(curInfo.offset, mLastOffset)));
+            float dragOffset = Math.max(mFirstOffset, Math.min(curInfo.offset, mLastOffset));
+            if (DEBUG) {
+                Log.d(TAG, "scrollToItem " +
+                        "mFirstOffset=" + mFirstOffset + ", " +
+                        "curInfo.offset=" + curInfo.offset + ", " +
+                        "mLastOffset=" + mLastOffset);
+            }
+
+            if (dragOffset >= 0.1f && item < mAdapter.getCount() - 1) {
+                dragOffset -= 0.1f;
+            } else if (item == mAdapter.getCount() - 1) {
+                dragOffset += 0.1f;
+            }
+            destX = (int) (width * dragOffset);
         }
         if (smoothScroll) {
             smoothScrollTo(destX, 0, velocity);
@@ -1127,7 +1139,7 @@ public class ViewPagerDrag extends ViewGroup {
                         mAdapter.destroyItem(this, pos, ii.object);
                         if (DEBUG) {
                             Log.i(TAG, "populate() - destroyItem() with pos: " + pos
-                                    + " view: " + ((View) ii.object));
+                                    + " view: " + (ii.object));
                         }
                         itemIndex--;
                         curIndex--;
@@ -1161,7 +1173,7 @@ public class ViewPagerDrag extends ViewGroup {
                             mAdapter.destroyItem(this, pos, ii.object);
                             if (DEBUG) {
                                 Log.i(TAG, "populate() - destroyItem() with pos: " + pos
-                                        + " view: " + ((View) ii.object));
+                                        + " view: " + (ii.object));
                             }
                             ii = itemIndex < mItems.size() ? mItems.get(itemIndex) : null;
                         }
@@ -1598,7 +1610,7 @@ public class ViewPagerDrag extends ViewGroup {
 
         // Make sure scroll position is set correctly.
         if (w != oldw) {
-            recomputeScrollPosition(w, oldw, mPageMargin, mPageMargin);
+            //recomputeScrollPosition(w, oldw, mPageMargin, mPageMargin);
         }
     }
 
@@ -1625,6 +1637,14 @@ public class ViewPagerDrag extends ViewGroup {
                 completeScroll(false);
                 scrollTo(scrollPos, getScrollY());
             }
+        }
+    }
+
+    @Override
+    public void scrollTo(int x, int y) {
+        super.scrollTo(x, y);
+        if (DEBUG) {
+            Log.d(TAG, "Positioning scrollTo x=" + x + ", margin=" + mPageMargin);
         }
     }
 
@@ -1720,9 +1740,10 @@ public class ViewPagerDrag extends ViewGroup {
                         child.measure(widthSpec, heightSpec);
                     }
                     if (DEBUG) {
-                        Log.v(TAG, "Positioning #" + i + " " + child + " f=" + ii.object
-                                + ":" + childLeft + "," + childTop + " " + child.getMeasuredWidth()
-                                + "x" + child.getMeasuredHeight());
+                        Log.v(TAG, "Positioning #" + i +
+                                "childWidth=" + childWidth +
+                                ", getMeasuredWidth=" + child.getMeasuredWidth() +
+                                ", childLeft=" + childLeft);
                     }
                     child.layout(childLeft, childTop,
                             childLeft + child.getMeasuredWidth(),
@@ -1735,7 +1756,7 @@ public class ViewPagerDrag extends ViewGroup {
         mDecorChildCount = decorCount;
 
         if (mFirstLayout) {
-            scrollToItem(mCurItem, false, 0, false);
+            // scrollToItem(mCurItem, false, 0, false);
         }
         mFirstLayout = false;
     }
@@ -2290,14 +2311,14 @@ public class ViewPagerDrag extends ViewGroup {
                 mLeftEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
-            scrollX = leftBound;
+//            scrollX = leftBound;
         } else if (scrollX > rightBound) {
             if (rightAbsolute) {
                 float over = scrollX - rightBound;
                 mRightEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
-            scrollX = rightBound;
+//            scrollX = rightBound;
         }
         // Don't lose the rounded component
         mLastMotionX += scrollX - (int) scrollX;

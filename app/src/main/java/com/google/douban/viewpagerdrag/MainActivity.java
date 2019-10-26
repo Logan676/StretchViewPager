@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         ViewPagerDrag vp = findViewById(R.id.view_pager_drag);
+        vp.setPageMargin(getResources().getDimensionPixelOffset(R.dimen.page_margin));
         ViewPagerDragPagerAdapter vpdpa = new ViewPagerDragPagerAdapter(getSupportFragmentManager());
         vp.setAdapter(vpdpa);
     }
