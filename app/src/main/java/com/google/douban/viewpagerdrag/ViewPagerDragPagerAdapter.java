@@ -4,9 +4,8 @@ import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentStatePagerAdapter;
 
-public class ViewPagerDragPagerAdapter extends FragmentStatePagerAdapter {
+public class ViewPagerDragPagerAdapter extends FragmentStatePagerAdapterDrag {
 
     public ViewPagerDragPagerAdapter(FragmentManager fm) {
         super(fm);
