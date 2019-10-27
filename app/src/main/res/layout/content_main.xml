@@ -8,7 +8,7 @@
     tools:context=".MainActivity"
     tools:showIn="@layout/activity_main">
 
-    <com.google.douban.viewpagerdrag.ViewPagerDrag
+    <com.google.douban.viewpagerdrag.StretchViewPager
         android:id="@+id/view_pager_drag"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

@@ -13,8 +13,8 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-public abstract class FragmentStatePagerAdapterDrag extends PagerAdapterDrag {
-    private static final String TAG = "FragmentStatePagerAdapterDrag";
+public abstract class StretchFragmentStatePagerAdapter extends StretchPagerAdapter {
+    private static final String TAG = "StretchFragmentStatePagerAdapter";
     private static final boolean DEBUG = false;
 
     private final FragmentManager mFragmentManager;
@@ -24,7 +24,7 @@ public abstract class FragmentStatePagerAdapterDrag extends PagerAdapterDrag {
     private ArrayList<Fragment> mFragments = new ArrayList<Fragment>();
     private Fragment mCurrentPrimaryItem = null;
 
-    public FragmentStatePagerAdapterDrag(FragmentManager fm) {
+    public StretchFragmentStatePagerAdapter(FragmentManager fm) {
         mFragmentManager = fm;
     }
 

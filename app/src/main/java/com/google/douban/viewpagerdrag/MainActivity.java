@@ -30,9 +30,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        ViewPagerDrag vp = findViewById(R.id.view_pager_drag);
+        StretchViewPager vp = findViewById(R.id.view_pager_drag);
         vp.setPageMargin(getResources().getDimensionPixelOffset(R.dimen.page_margin));
-        ViewPagerDragPagerAdapter vpdpa = new ViewPagerDragPagerAdapter(getSupportFragmentManager());
+        StretchViewPagerPagerAdapter vpdpa = new StretchViewPagerPagerAdapter(getSupportFragmentManager());
         vp.setAdapter(vpdpa);
     }
 

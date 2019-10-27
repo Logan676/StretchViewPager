@@ -5,15 +5,15 @@ import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
-public class ViewPagerDragPagerAdapter extends FragmentStatePagerAdapterDrag {
+public class StretchViewPagerPagerAdapter extends StretchFragmentStatePagerAdapter {
 
-    public ViewPagerDragPagerAdapter(FragmentManager fm) {
+    public StretchViewPagerPagerAdapter(FragmentManager fm) {
         super(fm);
     }
 
     @Override
     public Fragment getItem(int position) {
-        final DragableFragment f = new DragableFragment();
+        final StretchFragment f = new StretchFragment();
         Bundle bundle = new Bundle();
         bundle.putString("page_color", getPageColor(position));
         bundle.putInt("page_index", position);

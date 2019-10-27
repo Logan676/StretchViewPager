@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 package com.google.douban.viewpagerdrag;
 
 import android.content.Context;
@@ -25,7 +42,6 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.animation.Interpolator;
-import android.widget.EdgeEffect;
 import android.widget.Scroller;
 
 import java.lang.annotation.ElementType;
@@ -47,15 +63,14 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.AccessibilityDelegateCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.accessibility.AccessibilityEventCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.customview.view.AbsSavedState;
 import androidx.viewpager.widget.PagerTitleStrip;
 import androidx.viewpager.widget.ViewPager;
 
-public class ViewPagerDrag extends ViewGroup {
+public class StretchViewPager extends ViewGroup {
 
-    public static final String TAG = "ViewPagerDrag";
+    public static final String TAG = "StretchViewPager";
 
     private static final boolean DEBUG = true;
 
@@ -107,7 +122,7 @@ public class ViewPagerDrag extends ViewGroup {
 
     private final Rect mTempRect = new Rect();
 
-    PagerAdapterDrag mAdapter;
+    StretchPagerAdapter mAdapter;
     int mCurItem;   // Index of currently displayed page.
     private int mRestoredCurItem = -1;
     private Parcelable mRestoredAdapterState = null;
@@ -317,8 +332,8 @@ public class ViewPagerDrag extends ViewGroup {
          * @param oldAdapter the previously set adapter
          * @param newAdapter the newly set adapter
          */
-        void onAdapterChanged(@NonNull ViewPagerDrag viewPager,
-                              @Nullable PagerAdapterDrag oldAdapter, @Nullable PagerAdapterDrag newAdapter);
+        void onAdapterChanged(@NonNull StretchViewPager viewPager,
+                              @Nullable StretchPagerAdapter oldAdapter, @Nullable StretchPagerAdapter newAdapter);
     }
 
     /**
@@ -337,12 +352,12 @@ public class ViewPagerDrag extends ViewGroup {
     public @interface DecorView {
     }
 
-    public ViewPagerDrag(@NonNull Context context) {
+    public StretchViewPager(@NonNull Context context) {
         super(context);
         initViewPager();
     }
 
-    public ViewPagerDrag(@NonNull Context context, @Nullable AttributeSet attrs) {
+    public StretchViewPager(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         initViewPager();
     }
@@ -448,11 +463,11 @@ public class ViewPagerDrag extends ViewGroup {
     }
 
     /**
-     * Set a PagerAdapterDrag that will supply views for this pager as needed.
+     * Set a StretchPagerAdapter that will supply views for this pager as needed.
      *
      * @param adapter Adapter to use
      */
-    public void setAdapter(@Nullable PagerAdapterDrag adapter) {
+    public void setAdapter(@Nullable StretchPagerAdapter adapter) {
         if (mAdapter != null) {
             mAdapter.setViewPagerObserver(null);
             mAdapter.startUpdate(this);
@@ -467,7 +482,7 @@ public class ViewPagerDrag extends ViewGroup {
             scrollTo(0, 0);
         }
 
-        final PagerAdapterDrag oldAdapter = mAdapter;
+        final StretchPagerAdapter oldAdapter = mAdapter;
         mAdapter = adapter;
         mExpectedAdapterCount = 0;
 
@@ -515,10 +530,10 @@ public class ViewPagerDrag extends ViewGroup {
     /**
      * Retrieve the current adapter supplying pages.
      *
-     * @return The currently registered PagerAdapterDrag
+     * @return The currently registered StretchPagerAdapter
      */
     @Nullable
-    public PagerAdapterDrag getAdapter() {
+    public StretchPagerAdapter getAdapter() {
         return mAdapter;
     }
 
@@ -992,11 +1007,11 @@ public class ViewPagerDrag extends ViewGroup {
             final ItemInfo ii = mItems.get(i);
             final int newPos = mAdapter.getItemPosition(ii.object);
 
-            if (newPos == PagerAdapterDrag.POSITION_UNCHANGED) {
+            if (newPos == StretchPagerAdapter.POSITION_UNCHANGED) {
                 continue;
             }
 
-            if (newPos == PagerAdapterDrag.POSITION_NONE) {
+            if (newPos == StretchPagerAdapter.POSITION_NONE) {
                 mItems.remove(i);
                 i--;
 
@@ -1096,8 +1111,8 @@ public class ViewPagerDrag extends ViewGroup {
             } catch (Resources.NotFoundException e) {
                 resName = Integer.toHexString(getId());
             }
-            throw new IllegalStateException("The application's PagerAdapterDrag changed the adapter's"
-                    + " contents without calling PagerAdapterDrag#notifyDataSetChanged!"
+            throw new IllegalStateException("The application's StretchPagerAdapter changed the adapter's"
+                    + " contents without calling StretchPagerAdapter#notifyDataSetChanged!"
                     + " Expected adapter item count: " + mExpectedAdapterCount + ", found: " + N
                     + " Pager id: " + resName
                     + " Pager class: " + getClass()
@@ -3009,7 +3024,7 @@ public class ViewPagerDrag extends ViewGroup {
         @Override
         public void onInitializeAccessibilityEvent(View host, AccessibilityEvent event) {
             super.onInitializeAccessibilityEvent(host, event);
-            event.setClassName(ViewPagerDrag.class.getName());
+            event.setClassName(StretchViewPager.class.getName());
             event.setScrollable(canScroll());
             if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED && mAdapter != null) {
                 event.setItemCount(mAdapter.getCount());
@@ -3021,7 +3036,7 @@ public class ViewPagerDrag extends ViewGroup {
         @Override
         public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfoCompat info) {
             super.onInitializeAccessibilityNodeInfo(host, info);
-            info.setClassName(ViewPagerDrag.class.getName());
+            info.setClassName(StretchViewPager.class.getName());
             info.setScrollable(canScroll());
             if (canScrollHorizontally(1)) {
                 info.addAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD);
