@@ -2289,8 +2289,9 @@ public class ViewPagerDrag extends ViewGroup {
         float scrollX = oldScrollX + deltaX;
         final int width = getClientWidth();
 
-        float leftBound = width * mFirstOffset;
+        float leftBound = width * (mFirstOffset - 0.3f);
         float rightBound = width * mLastOffset;
+        float stretchRightBound = width * (mLastOffset + 0.3f);
         boolean leftAbsolute = true;
         boolean rightAbsolute = true;
 
@@ -2311,14 +2312,21 @@ public class ViewPagerDrag extends ViewGroup {
                 mLeftEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
-//            scrollX = leftBound;
+            scrollX = leftBound;
+        } else if (scrollX > stretchRightBound) {
+            if (rightAbsolute) {
+                float over = scrollX - rightBound;
+                mRightEdge.onPull(Math.abs(over) / width);
+                needsInvalidate = true;
+            }
+            scrollX = stretchRightBound;
         } else if (scrollX > rightBound) {
             if (rightAbsolute) {
                 float over = scrollX - rightBound;
                 mRightEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
-//            scrollX = rightBound;
+            // scrollX = rightBound;
         }
         // Don't lose the rounded component
         mLastMotionX += scrollX - (int) scrollX;
@@ -2403,28 +2411,19 @@ public class ViewPagerDrag extends ViewGroup {
         if (overScrollMode == View.OVER_SCROLL_ALWAYS
                 || (overScrollMode == View.OVER_SCROLL_IF_CONTENT_SCROLLS
                 && mAdapter != null && mAdapter.getCount() > 1)) {
-            if (!mLeftEdge.isFinished()) {
-                final int restoreCount = canvas.save();
-                final int height = getHeight() - getPaddingTop() - getPaddingBottom();
-                final int width = getWidth();
 
-                canvas.rotate(270);
-                canvas.translate(-height + getPaddingTop(), mFirstOffset * width);
-                mLeftEdge.setSize(width, (int) (height * 0.5f));
-                needsInvalidate |= mLeftEdge.draw(canvas);
-                canvas.restoreToCount(restoreCount);
-            }
-            if (!mRightEdge.isFinished()) {
-                final int restoreCount = canvas.save();
-                final int width = getWidth();
-                final int height = getHeight() - getPaddingTop() - getPaddingBottom();
+            final int restoreCount = canvas.save();
+            final int width = getWidth();
+            final int height = getHeight() - getPaddingTop() - getPaddingBottom();
 
-                canvas.rotate(90);
-                canvas.translate(height * 0.25f, -(mLastOffset + 1.1f) * width);
-                mRightEdge.setSize(width, (int) (height * 0.5f));
-                needsInvalidate |= mRightEdge.draw(canvas);
-                canvas.restoreToCount(restoreCount);
-            }
+            canvas.rotate(90);
+            canvas.translate(height * 0.5f, -(mLastOffset + 1.0f) * width);
+            // 40 * 80 dp
+            mRightEdge.setSize(
+                    getResources().getDimensionPixelOffset(R.dimen.stretch_area_W),
+                    getResources().getDimensionPixelOffset(R.dimen.stretch_area_H));
+            needsInvalidate |= mRightEdge.draw(canvas, width, height);
+            canvas.restoreToCount(restoreCount);
         } else {
             mLeftEdge.finish();
             mRightEdge.finish();
@@ -2432,7 +2431,7 @@ public class ViewPagerDrag extends ViewGroup {
 
         if (needsInvalidate) {
             // Keep animating
-            ViewCompat.postInvalidateOnAnimation(this);
+            //  ViewCompat.postInvalidateOnAnimation(this);
         }
     }
 

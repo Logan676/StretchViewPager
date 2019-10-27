@@ -4,4 +4,8 @@
     <dimen name="page_width_scale">0.7</dimen>
     <dimen name="page_offset">30dp</dimen>
     <dimen name="font_size_12">12dp</dimen>
+    <dimen name="stretch_view_w">10dp</dimen>
+    <dimen name="stretch_view_H">80dp</dimen>
+    <dimen name="stretch_area_W">40dp</dimen>
+    <dimen name="stretch_area_H">80dp</dimen>
 </resources>

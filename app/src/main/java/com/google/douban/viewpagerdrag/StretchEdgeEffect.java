@@ -1,16 +1,15 @@
 package com.google.douban.viewpagerdrag;
 
 import android.content.Context;
-import android.content.res.TypedArray;
-import android.graphics.BlendMode;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.os.Build;
+import android.util.Log;
 import android.view.animation.AnimationUtils;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
-import android.widget.EdgeEffect;
 
 import androidx.annotation.ColorInt;
 
@@ -21,7 +20,7 @@ import androidx.annotation.ColorInt;
  * <p>EdgeEffect is stateful. Custom widgets using EdgeEffect should create an
  * instance for each edge that should show the effect, feed it input data using
  * the methods {@link #onAbsorb(int)}, {@link #onPull(float)}, and {@link #onRelease()},
- * and draw the effect using {@link #draw(Canvas)} in the widget's overridden
+ * and draw the effect using {@link #draw(Canvas, int, int)} in the widget's overridden
  * {@link android.view.View#draw(Canvas)} method. If {@link #isFinished()} returns
  * false after drawing, the edge effect's animation is not yet complete and the widget
  * should schedule another drawing pass to continue the animation.</p>
@@ -30,17 +29,11 @@ import androidx.annotation.ColorInt;
  * usually by invoking <code>super.draw(canvas)</code> from an overridden <code>draw</code>
  * method. (This will invoke onDraw and dispatch drawing to child views as needed.)
  * The edge effect may then be drawn on top of the view's content using the
- * {@link #draw(Canvas)} method.</p>
+ * {@link #draw(Canvas, int, int)} method.</p>
  */
 public class StretchEdgeEffect {
 
-    /**
-     * The default blend mode used by {@link EdgeEffect}.
-     */
-    public static final BlendMode DEFAULT_BLEND_MODE = BlendMode.SRC_ATOP;
-
-    @SuppressWarnings("UnusedDeclaration")
-    private static final String TAG = "EdgeEffect";
+    private static final String TAG = "StretchEdgeEffect";
 
     // Time it will take the effect to fully recede in ms
     private static final int RECEDE_TIME = 600;
@@ -98,11 +91,16 @@ public class StretchEdgeEffect {
     private float mPullDistance;
 
     private final Rect mBounds = new Rect();
+    private final Rect mTmpBounds = new Rect();
     private final Paint mPaint = new Paint();
     private float mRadius;
     private float mBaseGlowScale;
     private float mDisplacement = 0.5f;
     private float mTargetDisplacement = 0.5f;
+
+    private Context mContext;
+    private Bitmap mBitmapLeftArrow;
+    private Bitmap mBitmapStretchText;
 
     /**
      * Construct a new EdgeEffect with a theme appropriate for the provided context.
@@ -110,16 +108,13 @@ public class StretchEdgeEffect {
      * @param context Context used to provide theming and resource information for the EdgeEffect
      */
     public StretchEdgeEffect(Context context) {
+        mContext = context;
         mPaint.setAntiAlias(true);
-//        final TypedArray a = context.obtainStyledAttributes(
-//                com.android.internal.R.styleable.EdgeEffect);
-//        final int themeColor = a.getColor(
-//                com.android.internal.R.styleable.EdgeEffect_colorEdgeEffect, 0xff666666);
-//        a.recycle();
-//        mPaint.setColor((themeColor & 0xffffff) | 0x33000000);
+        mPaint.setColor(0xff000000);
         mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setBlendMode(DEFAULT_BLEND_MODE);
         mInterpolator = new DecelerateInterpolator();
+        mBitmapLeftArrow = BitmapFactory.decodeResource(context.getResources(), R.mipmap.icon_left_arrow);
+        mBitmapStretchText = BitmapFactory.decodeResource(context.getResources(), R.mipmap.stretch_text);
     }
 
     /**
@@ -139,12 +134,12 @@ public class StretchEdgeEffect {
         mRadius = r;
         mBaseGlowScale = h > 0 ? Math.min(oh / h, 1.f) : 1.f;
 
-        mBounds.set(mBounds.left, mBounds.top, width, (int) Math.min(height, h));
+        mBounds.set(mBounds.left, mBounds.top, width, height);
     }
 
     /**
      * Reports if this EdgeEffect's animation is finished. If this method returns false
-     * after a call to {@link #draw(Canvas)} the host widget should schedule another
+     * after a call to {@link #draw(Canvas, int, int)} the host widget should schedule another
      * drawing pass to continue the animation.
      *
      * @return true if animation is finished, false if drawing should continue on the next frame.
@@ -205,7 +200,7 @@ public class StretchEdgeEffect {
         mStartTime = now;
         mDuration = PULL_TIME;
 
-        mPullDistance += deltaDistance;
+        mPullDistance = deltaDistance;
 
         final float absdd = Math.abs(deltaDistance);
         mGlowAlpha = mGlowAlphaStart = Math.min(MAX_ALPHA,
@@ -222,6 +217,8 @@ public class StretchEdgeEffect {
 
         mGlowAlphaFinish = mGlowAlpha;
         mGlowScaleYFinish = mGlowScaleY;
+
+        Log.d(TAG, "mPullDistance=" + mPullDistance + ", mGlowAlpha=" + mGlowAlpha + ", mGlowScaleY=" + mGlowScaleY);
     }
 
     /**
@@ -292,21 +289,6 @@ public class StretchEdgeEffect {
     }
 
     /**
-     * Set or clear the blend mode. A blend mode defines how source pixels
-     * (generated by a drawing command) are composited with the destination pixels
-     * (content of the render target).
-     * <p/>
-     * Pass null to clear any previous blend mode.
-     * <p/>
-     *
-     * @param blendmode May be null. The blend mode to be installed in the paint
-     * @see BlendMode
-     */
-    public void setBlendMode(@Nullable BlendMode blendmode) {
-        mPaint.setBlendMode(blendmode);
-    }
-
-    /**
      * Return the color of this edge effect in argb.
      *
      * @return The color of this edge effect in argb
@@ -316,20 +298,6 @@ public class StretchEdgeEffect {
         return mPaint.getColor();
     }
 
-
-    /**
-     * Returns the blend mode. A blend mode defines how source pixels
-     * (generated by a drawing command) are composited with the destination pixels
-     * (content of the render target).
-     * <p/>
-     *
-     * @return BlendMode
-     */
-    @Nullable
-    public BlendMode getBlendMode() {
-        return mPaint.getBlendMode();
-    }
-
     /**
      * Draw into the provided canvas. Assumes that the canvas has been rotated
      * accordingly and the size has been set. The effect will be drawn the full
@@ -337,26 +305,51 @@ public class StretchEdgeEffect {
      * 1.f of height.
      *
      * @param canvas Canvas to draw into
+     * @param width
+     * @param height
      * @return true if drawing should continue beyond this frame to continue the
      * animation
      */
-    public boolean draw(Canvas canvas) {
+    public boolean draw(Canvas canvas, int width, int height) {
         update();
 
         final int count = canvas.save();
 
         final float centerX = mBounds.centerX();
-        final float centerY = mBounds.height() - mRadius;
+        final float centerY = mBounds.height();
 
-        canvas.scale(1.f, Math.min(mGlowScaleY, 1.f) * mBaseGlowScale, centerX, 0);
+        canvas.rotate(-90);
 
-        final float displacement = Math.max(0, Math.min(mDisplacement, 1.f)) - 0.5f;
-        float translateX = mBounds.width() * displacement / 2;
+        mTmpBounds.set(mBounds.left,
+                0,
+                mBounds.right,
+                height);
+        canvas.clipRect(mTmpBounds);
 
-        canvas.clipRect(mBounds);
-        canvas.translate(translateX, 0);
-        mPaint.setAlpha((int) (0xff * mGlowAlpha));
-        canvas.drawCircle(centerX, centerY, mRadius, mPaint);
+
+        mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+        mPaint.setAlpha(255);
+        mPaint.setColor(0x9F222222);
+        mPaint.setTextSize(mContext.getResources().getDimensionPixelSize(R.dimen.font_size_12));
+
+        if (mBitmapLeftArrow != null && !mBitmapLeftArrow.isRecycled()) {
+            int left = (int) (mBounds.left - mPullDistance * mBounds.width()) + mContext.getResources().getDimensionPixelSize(R.dimen.page_margin);
+            int top = (int) (mBounds.top - mPullDistance * mBounds.width() / 4);
+            int right = mBounds.right - mContext.getResources().getDimensionPixelSize(R.dimen.page_margin);
+            int bottom = (int) (mBounds.bottom + mPullDistance * mBounds.width() / 4);
+            mTmpBounds.set(left, top, right, bottom);
+            Log.d(TAG, "drawBitmap left=" + left + ", top=" + top + ", right=" + right + ", bottom=" + bottom);
+            canvas.drawBitmap(mBitmapLeftArrow, null, mTmpBounds, mPaint);
+        }
+
+        if (mBitmapStretchText != null && !mBitmapStretchText.isRecycled()) {
+            mTmpBounds.set((int) centerX,
+                    mBounds.top,
+                    (int) centerX + mContext.getResources().getDimensionPixelOffset(R.dimen.stretch_view_w),
+                    mBounds.bottom);
+            canvas.drawBitmap(mBitmapStretchText, null, mTmpBounds, mPaint);
+        }
+
         canvas.restoreToCount(count);
 
         boolean oneLastFrame = false;
