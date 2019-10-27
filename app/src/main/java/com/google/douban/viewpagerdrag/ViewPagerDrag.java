@@ -178,8 +178,8 @@ public class ViewPagerDrag extends ViewGroup {
     private boolean mFakeDragging;
     private long mFakeDragBeginTime;
 
-    private EdgeEffect mLeftEdge;
-    private EdgeEffect mRightEdge;
+    private StretchEdgeEffect mLeftEdge;
+    private StretchEdgeEffect mRightEdge;
 
     private boolean mFirstLayout = true;
     private boolean mNeedCalculatePageOffsets = false;
@@ -359,8 +359,8 @@ public class ViewPagerDrag extends ViewGroup {
         mTouchSlop = configuration.getScaledPagingTouchSlop();
         mMinimumVelocity = (int) (MIN_FLING_VELOCITY * density);
         mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
-        mLeftEdge = new EdgeEffect(context);
-        mRightEdge = new EdgeEffect(context);
+        mLeftEdge = new StretchEdgeEffect(context);
+        mRightEdge = new StretchEdgeEffect(context);
 
         mFlingDistance = (int) (MIN_DISTANCE_FOR_FLING * density);
         mCloseEnough = (int) (CLOSE_ENOUGH * density);
@@ -2420,7 +2420,7 @@ public class ViewPagerDrag extends ViewGroup {
                 final int height = getHeight() - getPaddingTop() - getPaddingBottom();
 
                 canvas.rotate(90);
-                canvas.translate(-getPaddingTop(), -(mLastOffset + 1) * width);
+                canvas.translate(height * 0.25f, -(mLastOffset + 1.1f) * width);
                 mRightEdge.setSize(width, (int) (height * 0.5f));
                 needsInvalidate |= mRightEdge.draw(canvas);
                 canvas.restoreToCount(restoreCount);
