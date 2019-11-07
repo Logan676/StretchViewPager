@@ -1,16 +1,16 @@
 package com.google.douban.viewpagerdrag;
 
 import android.os.Bundle;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,6 +34,12 @@ public class MainActivity extends AppCompatActivity {
         vp.setPageMargin(getResources().getDimensionPixelOffset(R.dimen.page_margin));
         StretchViewPagerPagerAdapter vpdpa = new StretchViewPagerPagerAdapter(getSupportFragmentManager());
         vp.setAdapter(vpdpa);
+        vp.setOverStretchListener(new StretchViewPager.OverStretchListener() {
+            @Override
+            public void onOverStretched() {
+                Toast.makeText(getApplication(), "onOverStretched", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override

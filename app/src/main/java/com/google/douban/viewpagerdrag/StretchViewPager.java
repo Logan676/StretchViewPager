@@ -22,6 +22,7 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.DataSetObserver;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -44,16 +45,6 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.animation.Interpolator;
 import android.widget.Scroller;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
 import androidx.annotation.CallSuper;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
@@ -67,6 +58,16 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.customview.view.AbsSavedState;
 import androidx.viewpager.widget.PagerTitleStrip;
 import androidx.viewpager.widget.ViewPager;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class StretchViewPager extends ViewGroup {
 
@@ -83,6 +84,10 @@ public class StretchViewPager extends ViewGroup {
     private static final int DEFAULT_GUTTER_SIZE = 16; // dips
 
     private static final int MIN_FLING_VELOCITY = 400; // dips
+
+    private float ratio = 0.3f;
+
+    private Paint mPaint;
 
     static final int[] LAYOUT_ATTRS = new int[]{
             android.R.attr.layout_gravity
@@ -158,6 +163,7 @@ public class StretchViewPager extends ViewGroup {
     private int mDefaultGutterSize;
     private int mGutterSize;
     private int mTouchSlop;
+    private int mScaledTouchSlop;
     /**
      * Position of the last motion event.
      */
@@ -204,6 +210,7 @@ public class StretchViewPager extends ViewGroup {
     private List<OnPageChangeListener> mOnPageChangeListeners;
     private OnPageChangeListener mOnPageChangeListener;
     private OnPageChangeListener mInternalPageChangeListener;
+    private OverStretchListener mOverStretchListener;
     private List<OnAdapterChangeListener> mAdapterChangeListeners;
     private PageTransformer mPageTransformer;
     private int mPageTransformerLayerType;
@@ -336,6 +343,10 @@ public class StretchViewPager extends ViewGroup {
                               @Nullable StretchPagerAdapter oldAdapter, @Nullable StretchPagerAdapter newAdapter);
     }
 
+    public interface OverStretchListener {
+        void onOverStretched();
+    }
+
     /**
      * Annotation which allows marking of views to be decoration views when added to a view
      * pager.
@@ -363,6 +374,12 @@ public class StretchViewPager extends ViewGroup {
     }
 
     void initViewPager() {
+        mPaint = new Paint();
+        mPaint.setColor(0xffff0000);
+        mPaint.setAntiAlias(true);
+        mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+        mPaint.setStrokeWidth(4);
+
         setWillNotDraw(false);
         setDescendantFocusability(FOCUS_AFTER_DESCENDANTS);
         setFocusable(true);
@@ -372,6 +389,7 @@ public class StretchViewPager extends ViewGroup {
         final float density = context.getResources().getDisplayMetrics().density;
 
         mTouchSlop = configuration.getScaledPagingTouchSlop();
+        mScaledTouchSlop = configuration.getScaledTouchSlop();
         mMinimumVelocity = (int) (MIN_FLING_VELOCITY * density);
         mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
         mLeftEdge = new StretchEdgeEffect(context);
@@ -652,8 +670,10 @@ public class StretchViewPager extends ViewGroup {
 
             if (dragOffset >= 0.1f && item < mAdapter.getCount() - 1) {
                 dragOffset -= 0.1f;
-            } else if (item == mAdapter.getCount() - 1) {
+            } else if (item > 0 && item == mAdapter.getCount() - 1) {
                 dragOffset += 0.1f;
+            } else if (item == 0 && mAdapter.getCount() == 1) {
+                dragOffset = 0.f;
             }
             destX = (int) (width * dragOffset);
         }
@@ -791,6 +811,10 @@ public class StretchViewPager extends ViewGroup {
         OnPageChangeListener oldListener = mInternalPageChangeListener;
         mInternalPageChangeListener = listener;
         return oldListener;
+    }
+
+    public void setOverStretchListener(OverStretchListener listener) {
+        mOverStretchListener = listener;
     }
 
     /**
@@ -2251,6 +2275,13 @@ public class StretchViewPager extends ViewGroup {
                     setCurrentItemInternal(nextPage, true, true, initialVelocity);
 
                     needsInvalidate = resetTouch();
+
+                    if (mOverStretchListener != null && mRightEdge != null) {
+                        if (mRightEdge.isStretchThreshold()) {
+                            mOverStretchListener.onOverStretched();
+                        }
+                    }
+
                 }
                 break;
             case MotionEvent.ACTION_CANCEL:
@@ -2304,9 +2335,11 @@ public class StretchViewPager extends ViewGroup {
         float scrollX = oldScrollX + deltaX;
         final int width = getClientWidth();
 
-        float leftBound = width * (mFirstOffset - 0.3f);
+        float leftBound = 0;
+        float minLeftBound = width * (mFirstOffset - 0.3f);
         float rightBound = width * mLastOffset;
-        float stretchRightBound = width * (mLastOffset + 0.3f);
+        float rightStretchThreshold = width * (mLastOffset + 0.25f);
+        float maxRightBound = width * (mLastOffset + 0.3f);
         boolean leftAbsolute = true;
         boolean rightAbsolute = true;
 
@@ -2314,34 +2347,48 @@ public class StretchViewPager extends ViewGroup {
         final ItemInfo lastItem = mItems.get(mItems.size() - 1);
         if (firstItem.position != 0) {
             leftAbsolute = false;
-            leftBound = firstItem.offset * width;
+            minLeftBound = firstItem.offset * width;
         }
         if (lastItem.position != mAdapter.getCount() - 1) {
             rightAbsolute = false;
             rightBound = lastItem.offset * width;
         }
 
-        if (scrollX < leftBound) {
+        if (scrollX < minLeftBound) {
             if (leftAbsolute) {
-                float over = leftBound - scrollX;
+                float over = minLeftBound - scrollX;
                 mLeftEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
-            scrollX = leftBound;
-        } else if (scrollX > stretchRightBound) {
+            scrollX = minLeftBound;
+        } else if (scrollX < leftBound) {
+            float delta = scrollDeltaByRatio(scrollX, deltaX);
+            scrollX = oldScrollX + delta;
+        } else if (scrollX > maxRightBound) {
             if (rightAbsolute) {
                 float over = scrollX - rightBound;
+                mRightEdge.setStretchThreshold(true);
                 mRightEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
-            scrollX = stretchRightBound;
-        } else if (scrollX > rightBound) {
+            scrollX = maxRightBound;
+        } else if (scrollX > rightStretchThreshold) {
             if (rightAbsolute) {
                 float over = scrollX - rightBound;
+                mRightEdge.setStretchThreshold(true);
                 mRightEdge.onPull(Math.abs(over) / width);
                 needsInvalidate = true;
             }
             // scrollX = rightBound;
+        } else if (scrollX > rightBound) {
+            float over = scrollX - rightBound;
+            if (rightAbsolute) {
+                mRightEdge.setStretchThreshold(false);
+                mRightEdge.onPull(Math.abs(over) / width);
+                needsInvalidate = true;
+            }
+            float delta = scrollDeltaByRatio(over - 0.1f * width, deltaX);
+            scrollX = oldScrollX + delta;
         }
         // Don't lose the rounded component
         mLastMotionX += scrollX - (int) scrollX;
@@ -2349,6 +2396,25 @@ public class StretchViewPager extends ViewGroup {
         pageScrolled((int) scrollX);
 
         return needsInvalidate;
+    }
+
+    private float scrollDeltaByRatio(float translationX, float diff) {
+        if (Math.abs(diff) > 8) {
+            if (diff > 0) {
+                diff = 8;
+            } else {
+                diff = -8;
+            }
+        }
+        float rate = Math.abs(translationX) / (getClientWidth() * 0.3f);
+        Log.d("scrollDeltaByRatio", "rate=" + rate + ", translationX=" + translationX + ", diff=" + diff);
+        if (rate > 0.9F) {
+            rate = 0.9F;
+        }
+
+        diff *= 1.0F - rate;
+        Log.d("scrollDeltaByRatio", "process diff=" + diff + "\n\n");
+        return diff;
     }
 
     /**
@@ -2430,13 +2496,16 @@ public class StretchViewPager extends ViewGroup {
             final int restoreCount = canvas.save();
             final int width = getWidth();
             final int height = getHeight() - getPaddingTop() - getPaddingBottom();
-
-            canvas.rotate(90);
-            canvas.translate(height * 0.5f, -(mLastOffset + 1.0f) * width);
+//            canvas.rotate(90);
+//            canvas.drawLine(0, 0, 0, height, mPaint);
+//            canvas.drawLine(0, 0, width, 0, mPaint);
+            canvas.translate((mLastOffset + 1.0f) * width, 0);
+//            canvas.drawLine(0, 0,
+//                    width * 0.5f, Long.MAX_VALUE, mPaint);
             // 40 * 80 dp
-            mRightEdge.setSize(
-                    getResources().getDimensionPixelOffset(R.dimen.stretch_area_W),
-                    getResources().getDimensionPixelOffset(R.dimen.stretch_area_H));
+            int vW = getResources().getDimensionPixelOffset(R.dimen.stretch_area_W);
+            int vH = getResources().getDimensionPixelOffset(R.dimen.stretch_area_H);
+            mRightEdge.setSize(0, height / 2 - vH / 2, vW, vH);
             needsInvalidate |= mRightEdge.draw(canvas, width, height);
             canvas.restoreToCount(restoreCount);
         } else {

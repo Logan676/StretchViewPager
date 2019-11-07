@@ -8,9 +8,24 @@
     tools:context=".MainActivity"
     tools:showIn="@layout/activity_main">
 
-    <com.google.douban.viewpagerdrag.StretchViewPager
-        android:id="@+id/view_pager_drag"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.google.douban.viewpagerdrag.StretchViewPager
+                android:id="@+id/view_pager_drag"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="200dp"/>
+        </LinearLayout>
+
+    </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

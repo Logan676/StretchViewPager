@@ -89,6 +89,8 @@ public class StretchEdgeEffect {
     private int mState = STATE_IDLE;
 
     private float mPullDistance;
+    private boolean mStretchThreshold;
+
 
     private final Rect mBounds = new Rect();
     private final Rect mTmpBounds = new Rect();
@@ -101,6 +103,8 @@ public class StretchEdgeEffect {
     private Context mContext;
     private Bitmap mBitmapLeftArrow;
     private Bitmap mBitmapStretchText;
+    private Bitmap mBitmapStretchPull;
+    private Bitmap mBitmapStretchRelease;
 
     /**
      * Construct a new EdgeEffect with a theme appropriate for the provided context.
@@ -115,15 +119,19 @@ public class StretchEdgeEffect {
         mInterpolator = new DecelerateInterpolator();
         mBitmapLeftArrow = BitmapFactory.decodeResource(context.getResources(), R.mipmap.icon_left_arrow);
         mBitmapStretchText = BitmapFactory.decodeResource(context.getResources(), R.mipmap.stretch_text);
+        mBitmapStretchPull = BitmapFactory.decodeResource(context.getResources(), R.mipmap.stretch_pull);
+        mBitmapStretchRelease = BitmapFactory.decodeResource(context.getResources(), R.mipmap.stretch_release);
     }
 
     /**
      * Set the size of this edge effect in pixels.
      *
+     * @param left
+     * @param top
      * @param width  Effect width in pixels
      * @param height Effect height in pixels
      */
-    public void setSize(int width, int height) {
+    public void setSize(int left, int top, int width, int height) {
         final float r = width * RADIUS_FACTOR / SIN;
         final float y = COS * r;
         final float h = r - y;
@@ -134,7 +142,7 @@ public class StretchEdgeEffect {
         mRadius = r;
         mBaseGlowScale = h > 0 ? Math.min(oh / h, 1.f) : 1.f;
 
-        mBounds.set(mBounds.left, mBounds.top, width, height);
+        mBounds.set(left, top, left + width, top + height);
     }
 
     /**
@@ -219,6 +227,14 @@ public class StretchEdgeEffect {
         mGlowScaleYFinish = mGlowScaleY;
 
         Log.d(TAG, "mPullDistance=" + mPullDistance + ", mGlowAlpha=" + mGlowAlpha + ", mGlowScaleY=" + mGlowScaleY);
+    }
+
+    public void setStretchThreshold(boolean stretchThreshold) {
+        mStretchThreshold = stretchThreshold;
+    }
+
+    public boolean isStretchThreshold() {
+        return mStretchThreshold;
     }
 
     /**
@@ -318,8 +334,7 @@ public class StretchEdgeEffect {
         final float centerX = mBounds.centerX();
         final float centerY = mBounds.height();
 
-        canvas.rotate(-90);
-
+//        canvas.rotate(-90);
         mTmpBounds.set(mBounds.left,
                 0,
                 mBounds.right,
@@ -342,12 +357,10 @@ public class StretchEdgeEffect {
             canvas.drawBitmap(mBitmapLeftArrow, null, mTmpBounds, mPaint);
         }
 
-        if (mBitmapStretchText != null && !mBitmapStretchText.isRecycled()) {
-            mTmpBounds.set((int) centerX,
-                    mBounds.top,
-                    (int) centerX + mContext.getResources().getDimensionPixelOffset(R.dimen.stretch_view_w),
-                    mBounds.bottom);
-            canvas.drawBitmap(mBitmapStretchText, null, mTmpBounds, mPaint);
+        if (!mStretchThreshold) {
+            drawStretchHint(canvas, (int) centerX, mBitmapStretchPull);
+        } else {
+            drawStretchHint(canvas, (int) centerX, mBitmapStretchRelease);
         }
 
         canvas.restoreToCount(count);
@@ -361,9 +374,19 @@ public class StretchEdgeEffect {
         return mState != STATE_IDLE || oneLastFrame;
     }
 
+    private void drawStretchHint(Canvas canvas, int centerX, Bitmap bitmap) {
+        if (bitmap != null && !bitmap.isRecycled()) {
+            mTmpBounds.set(centerX,
+                    mBounds.top,
+                    centerX + mContext.getResources().getDimensionPixelOffset(R.dimen.stretch_view_w),
+                    mBounds.bottom);
+            canvas.drawBitmap(bitmap, null, mTmpBounds, mPaint);
+        }
+    }
+
     /**
      * Return the maximum height that the edge effect will be drawn at given the original
-     * {@link #setSize(int, int) input size}.
+     * {@link #setSize(int, int, int, int) input size}.
      *
      * @return The maximum height of the edge effect
      */
